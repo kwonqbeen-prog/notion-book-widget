@@ -15,32 +15,30 @@
 
         body {
             margin: 0;
-            padding: 10px;
+            padding: 0; /* 노션 콜아웃 내부 여백 활용을 위해 0으로 설정 */
             font-family: var(--notion-font);
             color: var(--notion-text);
             background-color: var(--notion-bg);
-            display: flex;
-            justify-content: center;
         }
 
         .widget-container {
             width: 100%;
-            max-width: 500px;
-            border: 1px solid var(--notion-border);
-            border-radius: 8px;
-            padding: 16px;
-            background: #ffffff;
-            box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 2px 4px;
+            /* 테두리 및 그림자 제거 */
+            border: none;
+            box-shadow: none;
+            background: transparent;
         }
 
         .search-area {
             display: flex;
             gap: 8px;
             margin-bottom: 12px;
+            align-items: center;
         }
 
         input[type="text"] {
             flex: 1;
+            min-width: 0; /* 너비 축소 시 버튼을 밀어내지 않도록 설정 */
             background-color: var(--notion-input-bg);
             border: none;
             padding: 10px 14px;
@@ -50,19 +48,20 @@
             color: var(--notion-text);
         }
 
-        /* 노션 스타일 검색 버튼 */
         .notion-button {
             display: flex;
             align-items: center;
+            justify-content: center;
             background-color: #ffffff;
             border: 1px solid #e9e9e8;
-            padding: 4px 10px;
+            padding: 8px 12px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
             font-weight: 500;
             color: var(--notion-text);
             white-space: nowrap;
+            flex-shrink: 0; /* 너비가 좁아져도 버튼 크기 유지 */
             transition: background 0.1s ease;
         }
 
@@ -82,7 +81,6 @@
         #result-list {
             max-height: 350px;
             overflow-y: auto;
-            margin-top: 10px;
         }
 
         .book-item {
@@ -95,12 +93,12 @@
         }
 
         .book-item:hover {
-            background-color: #f7f7f5;
+            background-color: rgba(55, 53, 47, 0.04);
         }
 
         .thumbnail {
-            width: 50px;
-            height: 72px;
+            width: 45px;
+            height: 65px;
             object-fit: cover;
             border-radius: 3px;
             margin-right: 14px;
@@ -131,13 +129,6 @@
             white-space: nowrap;
         }
 
-        #status-msg {
-            font-size: 12px;
-            margin-top: 12px;
-            text-align: center;
-            font-weight: 500;
-        }
-
         #result-list::-webkit-scrollbar { width: 4px; }
         #result-list::-webkit-scrollbar-thumb { background: var(--notion-border); border-radius: 10px; }
     </style>
@@ -147,23 +138,17 @@
 <div class="widget-container">
     <div class="search-area">
         <input type="text" id="search-input" placeholder="">
-        <button onclick="searchBooks()" class="notion-button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            검색
-        </button>
+        <button onclick="searchBooks()" class="notion-button">검색</button>
     </div>
-    
     <div id="result-list"></div>
-    <div id="status-msg"></div>
 </div>
 
 <script>
     const KAKAO_API_KEY = 'd227fec4310ee8dfb46632079553dec1'; 
-    const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/j2n4rwrpv9e7jt5k5f2f37xlkp537qti'; // 여기에 반드시 Make 웹훅 주소를 넣으세요!
+    const MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/j2n4rwrpv9e7jt5k5f2f37xlkp537qti'; 
 
     const searchInput = document.getElementById('search-input');
     const resultList = document.getElementById('result-list');
-    const statusMsg = document.getElementById('status-msg');
 
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') searchBooks();
@@ -173,8 +158,6 @@
         const query = searchInput.value.trim();
         if (!query) return;
 
-        statusMsg.style.color = "var(--notion-text)";
-        statusMsg.innerText = "검색 중...";
         resultList.innerHTML = '';
 
         try {
@@ -183,36 +166,41 @@
             });
             const data = await response.json();
             displayResults(data.documents);
-            statusMsg.innerText = "";
         } catch (error) {
-            statusMsg.innerText = "검색 중 오류가 발생했습니다.";
+            console.error("Search failed");
         }
     }
 
     function displayResults(books) {
         if (books.length === 0) {
-            resultList.innerHTML = '<p style="font-size:13px; text-align:center; padding: 20px;">검색 결과가 없습니다.</p>';
+            resultList.innerHTML = '<p style="font-size:13px; text-align:center; padding: 20px; color:rgba(55, 53, 47, 0.5);">결과 없음</p>';
             return;
         }
 
         books.forEach(book => {
-            // 저자 및 번역자 정보 결합 로직
-            const authorText = book.authors.length > 0 ? `${book.authors.join(', ')} 저` : '';
-            const translatorText = book.translators.length > 0 ? `, ${book.translators.join(', ')} 역` : '';
-            const combinedAuth = authorText + translatorText;
+            // 저자 및 번역자 텍스트 생성
+            const authors = book.authors.length > 0 ? `${book.authors.join(', ')} 저` : '';
+            const translators = book.translators.length > 0 ? `${book.translators.join(', ')} 역` : '';
+            const combinedAuth = [authors, translators].filter(Boolean).join(', ');
+
+            const publisher = book.publisher || '';
             const pubYear = book.datetime ? book.datetime.substring(0, 4) : '';
+
+            // 메타 정보 조립 (값이 있는 것만 결합)
+            const infoParts = [];
+            if (combinedAuth) infoParts.push(combinedAuth);
+            if (publisher) infoParts.push(publisher);
+            if (pubYear) infoParts.push(pubYear);
+
+            const metaHtml = infoParts.join('<span class="separator"></span>');
 
             const item = document.createElement('div');
             item.className = 'book-item';
             item.innerHTML = `
-                <img class="thumbnail" src="${book.thumbnail || 'https://via.placeholder.com/50x72?text=No+Img'}" alt="cover">
+                <img class="thumbnail" src="${book.thumbnail || 'https://via.placeholder.com/45x65?text=No+Img'}" alt="cover">
                 <div class="book-info">
                     <p class="book-title" title="${book.title}">${book.title}</p>
-                    <p class="book-meta">
-                        ${combinedAuth} <span class="separator"></span> 
-                        ${book.publisher} <span class="separator"></span> 
-                        ${pubYear}
-                    </p>
+                    <p class="book-meta">${metaHtml}</p>
                 </div>
             `;
             item.onclick = () => saveToNotionViaMake(book);
@@ -221,20 +209,13 @@
     }
 
     async function saveToNotionViaMake(book) {
-        if (!MAKE_WEBHOOK_URL) {
-            alert('MAKE_WEBHOOK_URL을 설정해주세요.');
-            return;
-        }
+        if (!MAKE_WEBHOOK_URL) return;
 
-        statusMsg.innerText = "노션에 저장 중...";
-        statusMsg.style.color = "var(--notion-text)";
-
-        // 저장용 데이터 가공
         const authorInfo = book.authors.join(', ') + ' 저' + (book.translators.length > 0 ? ', ' + book.translators.join(', ') + ' 역' : '');
         const pubYear = book.datetime ? book.datetime.substring(0, 4) : '';
 
         try {
-            const response = await fetch(MAKE_WEBHOOK_URL, {
+            await fetch(MAKE_WEBHOOK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -246,20 +227,10 @@
                     image: book.thumbnail
                 })
             });
-
-            if (response.ok) {
-                statusMsg.innerText = "✅ 저장 완료";
-                statusMsg.style.color = "#008000";
-            } else {
-                statusMsg.innerText = "❌ 저장 실패 (웹훅 에러)";
-                statusMsg.style.color = "#ff0000";
-            }
         } catch (error) {
-            statusMsg.innerText = "❌ 에러: 웹훅 연결 실패";
-            statusMsg.style.color = "#ff0000";
+            console.error("Save failed");
         }
     }
 </script>
-
 </body>
 </html>

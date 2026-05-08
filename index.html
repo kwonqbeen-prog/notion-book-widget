@@ -29,11 +29,11 @@
 
         /* [수정] 모바일 아이콘 간섭 방지를 위한 제목 행 */
         .widget-header {
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 16px;
+            font-weight: 500;
             margin-bottom: 12px;
-            padding-left: 2px;
-            color: rgba(55, 53, 47, 0.6); /* 노션 스타일의 연한 제목 색상 */
+            padding-left: 0px;
+            color: var(--notion-text);
             display: flex;
             align-items: center;
         }
@@ -149,7 +149,7 @@
     <div class="widget-header">도서 검색</div>
     
     <div class="search-area">
-        <input type="text" id="search-input" placeholder="검색어 입력...">
+        <input type="text" id="search-input" placeholder="">
         <button onclick="searchBooks()" class="notion-button">검색</button>
     </div>
     <div id="result-list"></div>

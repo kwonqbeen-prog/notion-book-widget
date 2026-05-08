@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Book Search Widget</title>
+    <style>
+        :root {
+            --notion-bg: transparent;
+            --notion-input-bg: #f1f1ef;
+            --notion-text: #37352f;
+            --notion-border: rgba(55, 53, 47, 0.16);
+            --notion-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+        }
+
+        body {
+            margin: 0;
+            padding: 10px;
+            font-family: var(--notion-font);
+            color: var(--notion-text);
+            background-color: var(--notion-bg);
+            display: flex;
+            justify-content: center;
+        }
+
+        .widget-container {
+            width: 100%;
+            max-width: 500px;
+            border: 1px solid var(--notion-border);
+            border-radius: 8px;
+            padding: 16px;
+            background: #ffffff;
+            box-shadow: rgba(15, 15, 15, 0.05) 0px 0px 0px 1px, rgba(15, 15, 15, 0.1) 0px 2px 4px;
+        }
+
+        .search-area {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background-color: var(--notion-input-bg);
+            border: none;
+            padding: 10px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+            outline: none;
+            color: var(--notion-text);
+        }
+
+        /* 노션 스타일 검색 버튼 */
+        .notion-button {
+            display: flex;
+            align-items: center;
+            background-color: #ffffff;
+            border: 1px solid #e9e9e8;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--notion-text);
+            white-space: nowrap;
+            transition: background 0.1s ease;
+        }
+
+        .notion-button:hover {
+            background-color: #f1f1ef;
+        }
+
+        .separator {
+            display: inline-block;
+            width: 1px;
+            height: 10px;
+            background-color: rgba(55, 53, 47, 0.2);
+            margin: 0 8px;
+            vertical-align: middle;
+        }
+
+        #result-list {
+            max-height: 350px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .book-item {
+            display: flex;
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--notion-border);
+            cursor: pointer;
+            transition: background 0.1s ease;
+            align-items: center;
+        }
+
+        .book-item:hover {
+            background-color: #f7f7f5;
+        }
+
+        .thumbnail {
+            width: 50px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 3px;
+            margin-right: 14px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .book-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .book-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .book-meta {
+            font-size: 12px;
+            color: rgba(55, 53, 47, 0.6);
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #status-msg {
+            font-size: 12px;
+            margin-top: 12px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        #result-list::-webkit-scrollbar { width: 4px; }
+        #result-list::-webkit-scrollbar-thumb { background: var(--notion-border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="widget-container">
+    <div class="search-area">
+        <input type="text" id="search-input" placeholder="">
+        <button onclick="searchBooks()" class="notion-button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 6px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            검색
+        </button>
+    </div>
+    
+    <div id="result-list"></div>
+    <div id="status-msg"></div>
+</div>
+
+<script>
+    const KAKAO_API_KEY = 'd227fec4310ee8dfb46632079553dec1'; 
+    const MAKE_WEBHOOK_URL = ''; // 여기에 반드시 Make 웹훅 주소를 넣으세요!
+
+    const searchInput = document.getElementById('search-input');
+    const resultList = document.getElementById('result-list');
+    const statusMsg = document.getElementById('status-msg');
+
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') searchBooks();
+    });
+
+    async function searchBooks() {
+        const query = searchInput.value.trim();
+        if (!query) return;
+
+        statusMsg.style.color = "var(--notion-text)";
+        statusMsg.innerText = "검색 중...";
+        resultList.innerHTML = '';
+
+        try {
+            const response = await fetch(`https://dapi.kakao.com/v3/search/book?query=${encodeURIComponent(query)}`, {
+                headers: { 'Authorization': `KakaoAK ${KAKAO_API_KEY}` }
+            });
+            const data = await response.json();
+            displayResults(data.documents);
+            statusMsg.innerText = "";
+        } catch (error) {
+            statusMsg.innerText = "검색 중 오류가 발생했습니다.";
+        }
+    }
+
+    function displayResults(books) {
+        if (books.length === 0) {
+            resultList.innerHTML = '<p style="font-size:13px; text-align:center; padding: 20px;">검색 결과가 없습니다.</p>';
+            return;
+        }
+
+        books.forEach(book => {
+            // 저자 및 번역자 정보 결합 로직
+            const authorText = book.authors.length > 0 ? `${book.authors.join(', ')} 저` : '';
+            const translatorText = book.translators.length > 0 ? `, ${book.translators.join(', ')} 역` : '';
+            const combinedAuth = authorText + translatorText;
+            const pubYear = book.datetime ? book.datetime.substring(0, 4) : '';
+
+            const item = document.createElement('div');
+            item.className = 'book-item';
+            item.innerHTML = `
+                <img class="thumbnail" src="${book.thumbnail || 'https://via.placeholder.com/50x72?text=No+Img'}" alt="cover">
+                <div class="book-info">
+                    <p class="book-title" title="${book.title}">${book.title}</p>
+                    <p class="book-meta">
+                        ${combinedAuth} <span class="separator"></span> 
+                        ${book.publisher} <span class="separator"></span> 
+                        ${pubYear}
+                    </p>
+                </div>
+            `;
+            item.onclick = () => saveToNotionViaMake(book);
+            resultList.appendChild(item);
+        });
+    }
+
+    async function saveToNotionViaMake(book) {
+        if (!MAKE_WEBHOOK_URL) {
+            alert('MAKE_WEBHOOK_URL을 설정해주세요.');
+            return;
+        }
+
+        statusMsg.innerText = "노션에 저장 중...";
+        statusMsg.style.color = "var(--notion-text)";
+
+        // 저장용 데이터 가공
+        const authorInfo = book.authors.join(', ') + ' 저' + (book.translators.length > 0 ? ', ' + book.translators.join(', ') + ' 역' : '');
+        const pubYear = book.datetime ? book.datetime.substring(0, 4) : '';
+
+        try {
+            const response = await fetch(MAKE_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: book.title,
+                    author: authorInfo,
+                    publisher: book.publisher,
+                    year: pubYear,
+                    isbn: book.isbn,
+                    image: book.thumbnail
+                })
+            });
+
+            if (response.ok) {
+                statusMsg.innerText = "✅ 저장 완료";
+                statusMsg.style.color = "#008000";
+            } else {
+                statusMsg.innerText = "❌ 저장 실패 (웹훅 에러)";
+                statusMsg.style.color = "#ff0000";
+            }
+        } catch (error) {
+            statusMsg.innerText = "❌ 에러: 웹훅 연결 실패";
+            statusMsg.style.color = "#ff0000";
+        }
+    }
+</script>
+
+</body>
+</html>
